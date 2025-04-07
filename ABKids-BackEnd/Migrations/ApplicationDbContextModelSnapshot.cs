@@ -503,13 +503,13 @@ namespace ABKids_BackEnd.Migrations
                     b.HasOne("ABKids_BackEnd.Models.Child", "Child")
                         .WithMany("TasksAssigned")
                         .HasForeignKey("ChildId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ABKids_BackEnd.Models.Parent", "Parent")
                         .WithMany("TasksCreated")
                         .HasForeignKey("ParentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Child");
@@ -522,13 +522,13 @@ namespace ABKids_BackEnd.Migrations
                     b.HasOne("ABKids_BackEnd.Models.Account", "ReceiverAccount")
                         .WithMany("ReceivedTransactions")
                         .HasForeignKey("ReceiverAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ABKids_BackEnd.Models.Account", "SenderAccount")
                         .WithMany("SentTransactions")
                         .HasForeignKey("SenderAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ReceiverAccount");

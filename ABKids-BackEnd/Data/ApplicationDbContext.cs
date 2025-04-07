@@ -102,6 +102,31 @@ namespace ABKids_BackEnd.Data
                 .HasOne(sg => sg.Account)
                 .WithOne(a => a.SavingsGoal)
                 .HasForeignKey<SavingsGoal>(sg => sg.AccountId);
-        }
+            // Task Relationships
+            modelBuilder.Entity<Task>()
+                .HasOne(t => t.Parent)
+                .WithMany(p => p.TasksCreated)
+                .HasForeignKey(t => t.ParentId)
+                .OnDelete(DeleteBehavior.Restrict); // Disable cascade for ParentId
+
+            modelBuilder.Entity<Task>()
+                .HasOne(t => t.Child)
+                .WithMany(c => c.TasksAssigned)
+                .HasForeignKey(t => t.ChildId)
+                .OnDelete(DeleteBehavior.Restrict);// Disable cascade for ChildId
+            // Transaction Relationships
+            modelBuilder.Entity<Transaction>()
+                .HasOne(t => t.SenderAccount)
+                .WithMany(a => a.SentTransactions)
+                .HasForeignKey(t => t.SenderAccountId)
+                .OnDelete(DeleteBehavior.Restrict); // Disable cascade for SenderAccountId
+
+            modelBuilder.Entity<Transaction>()
+                .HasOne(t => t.ReceiverAccount)
+                .WithMany(a => a.ReceivedTransactions)
+                .HasForeignKey(t => t.ReceiverAccountId)
+                .OnDelete(DeleteBehavior.Restrict); // Disable cascade for ReceiverAccountId
+        
+    }
     }
 }

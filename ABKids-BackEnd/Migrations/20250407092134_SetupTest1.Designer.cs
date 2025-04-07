@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ABKids_BackEnd.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250407075525_SetupTest2")]
-    partial class SetupTest2
+    [Migration("20250407092134_SetupTest1")]
+    partial class SetupTest1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -506,13 +506,13 @@ namespace ABKids_BackEnd.Migrations
                     b.HasOne("ABKids_BackEnd.Models.Child", "Child")
                         .WithMany("TasksAssigned")
                         .HasForeignKey("ChildId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ABKids_BackEnd.Models.Parent", "Parent")
                         .WithMany("TasksCreated")
                         .HasForeignKey("ParentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Child");
@@ -525,13 +525,13 @@ namespace ABKids_BackEnd.Migrations
                     b.HasOne("ABKids_BackEnd.Models.Account", "ReceiverAccount")
                         .WithMany("ReceivedTransactions")
                         .HasForeignKey("ReceiverAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ABKids_BackEnd.Models.Account", "SenderAccount")
                         .WithMany("SentTransactions")
                         .HasForeignKey("SenderAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ReceiverAccount");
