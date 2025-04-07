@@ -6,7 +6,7 @@
         public AccountOwnerType OwnerType { get; set; } 
         public decimal Balance { get; set; }
 
-        // Continue Relations 
+        // Continue Relations cj
 
 
 
