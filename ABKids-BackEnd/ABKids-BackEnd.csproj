@@ -20,8 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="DTOs\" />
     <Folder Include="Uploads\SavingsGoalPictures\" />
     <Folder Include="Uploads\TaskPictures\" />
     <Folder Include="Uploads\ProfilePictures\" />
