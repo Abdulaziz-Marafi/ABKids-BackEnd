@@ -13,7 +13,7 @@ namespace ABKids_BackEnd.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class ParentController : ControllerBase
+    public class ParentsController : ControllerBase
     {
         #region Services
 
@@ -21,7 +21,7 @@ namespace ABKids_BackEnd.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ParentController(
+        public ParentsController(
             UserManager<User> userManager,
             ApplicationDbContext context,
             IWebHostEnvironment webHostEnvironment)
