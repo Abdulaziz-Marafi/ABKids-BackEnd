@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static ABKids_BackEnd.Models.Account;
 using static ABKids_BackEnd.Models.User;
+using Task = ABKids_BackEnd.Models.Task;
 
 namespace ABKids_BackEnd.Controllers
 {
@@ -198,6 +199,74 @@ namespace ABKids_BackEnd.Controllers
                 ReceiverAccountId = child.Account.AccountId,
                 ReceiverType = TransactionResponseDTO.AccountOwnerType.Child,
                 NewReceiverBalance = child.Account.Balance
+            };
+
+            return Ok(response);
+        }
+
+        // POST: api/parent/create-task (Create a Task for a Child)
+        [HttpPost("create-task")]
+        public async Task<IActionResult> CreateTask([FromForm] CreateTaskRequestDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Validate RewardAmount
+            if (dto.RewardAmount < 0)
+            {
+                ModelState.AddModelError("RewardAmount", "Reward amount cannot be negative");
+                return BadRequest(ModelState);
+            }
+
+            // Get the authenticated parent's ID
+            var parentId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var parent = await _userManager.FindByIdAsync(parentId);
+            if (parent == null || parent.Type != UserType.Parent)
+            {
+                return Unauthorized(new { Message = "Only parents can create tasks" });
+            }
+
+            // Verify the child exists and belongs to this parent
+            var child = await _context.Users.OfType<Child>()
+                .FirstOrDefaultAsync(c => c.Id == dto.ChildId && c.ParentId == int.Parse(parentId));
+            if (child == null)
+            {
+                return NotFound(new { Message = "Child not found or not associated with this parent" });
+            }
+
+            // Upload task picture if provided
+            string taskPicturePath = UploadFile(dto.TaskPicture);
+
+            // Create the task
+            var task = new Task
+            {
+                TaskName = dto.TaskName,
+                TaskDescription = dto.TaskDescription,
+                TaskPicture = taskPicturePath,
+                Status = Task.TaskStatus.Ongoing, // Initial status
+                RewardAmount = dto.RewardAmount,
+                DateCreated = DateTime.UtcNow,
+                ParentId = int.Parse(parentId),
+                ChildId = dto.ChildId
+            };
+
+            _context.Tasks.Add(task);
+            await _context.SaveChangesAsync();
+
+            // Prepare response
+            var response = new TaskResponseDTO
+            {
+                TaskId = task.TaskId,
+                TaskName = task.TaskName,
+                TaskDescription = task.TaskDescription,
+                TaskPicture = task.TaskPicture,
+                Status = task.Status.ToString(),
+                RewardAmount = task.RewardAmount,
+                DateCreated = task.DateCreated,
+                ParentId = task.ParentId,
+                ChildId = task.ChildId
             };
 
             return Ok(response);
