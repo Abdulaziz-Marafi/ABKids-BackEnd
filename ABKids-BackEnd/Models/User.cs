@@ -9,6 +9,8 @@ namespace ABKids_BackEnd.Models
         public string? ProfilePicture { get; set; }
         public UserType Type { get; set; } // Discriminator Property
 
+
+
         public enum UserType
         {
             Parent,
