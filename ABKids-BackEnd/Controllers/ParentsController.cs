@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 using static ABKids_BackEnd.Models.Account;
 using static ABKids_BackEnd.Models.User;
 using Task = ABKids_BackEnd.Models.Task;
@@ -38,6 +39,75 @@ namespace ABKids_BackEnd.Controllers
         #endregion
 
         #region Get Actions
+
+        // GET: api/parent/tasks(Get All Tasks for All Children)
+        [HttpGet("tasks")]
+        public async Task<IActionResult> GetAllTasks()
+        {
+            var parentId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var parent = await _userManager.FindByIdAsync(parentId);
+            if (parent == null || parent.Type != UserType.Parent)
+            {
+                return Unauthorized(new { Message = "Only parents can view tasks" });
+            }
+
+            var tasks = await _context.Tasks
+                .Where(t => t.ParentId == int.Parse(parentId))
+                .Select(t => new TaskResponseDTO
+                {
+                    TaskId = t.TaskId,
+                    TaskName = t.TaskName,
+                    TaskDescription = t.TaskDescription,
+                    TaskPicture = t.TaskPicture,
+                    Status = t.Status.ToString(),
+                    RewardAmount = t.RewardAmount,
+                    DateCreated = t.DateCreated,
+                    DateCompleted = t.DateCompleted,
+                    ParentId = t.ParentId,
+                    ChildId = t.ChildId
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
+
+        // GET: api/parent/tasks/{childId} (Get All Tasks for One Child)
+        [HttpGet("tasks/{childId}")]
+        public async Task<IActionResult> GetTasksForChild(int childId)
+        {
+            var parentId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var parent = await _userManager.FindByIdAsync(parentId);
+            if (parent == null || parent.Type != UserType.Parent)
+            {
+                return Unauthorized(new { Message = "Only parents can view tasks" });
+            }
+
+            var child = await _context.Users.OfType<Child>()
+                .FirstOrDefaultAsync(c => c.Id == childId && c.ParentId == int.Parse(parentId));
+            if (child == null)
+            {
+                return NotFound(new { Message = "Child not found or not associated with this parent" });
+            }
+
+            var tasks = await _context.Tasks
+                .Where(t => t.ChildId == childId && t.ParentId == int.Parse(parentId))
+                .Select(t => new TaskResponseDTO
+                {
+                    TaskId = t.TaskId,
+                    TaskName = t.TaskName,
+                    TaskDescription = t.TaskDescription,
+                    TaskPicture = t.TaskPicture,
+                    Status = t.Status.ToString(),
+                    RewardAmount = t.RewardAmount,
+                    DateCreated = t.DateCreated,
+                    DateCompleted = t.DateCompleted,
+                    ParentId = t.ParentId,
+                    ChildId = t.ChildId
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
 
         #endregion
 
@@ -69,7 +139,7 @@ namespace ABKids_BackEnd.Controllers
             }
 
             // Upload profile picture if provided
-            string profilePicturePath = UploadFile(dto.ProfilePicture);
+            string profilePicturePath = UploadFile(dto.ProfilePicture, "ProfilePictures");
 
             // Create the child
             var child = new Child
@@ -241,7 +311,7 @@ namespace ABKids_BackEnd.Controllers
             }
 
             // Upload task picture if provided
-            string taskPicturePath = UploadFile(dto.TaskPicture);
+            string taskPicturePath = UploadFile(dto.TaskPicture, "TaskPictures");
 
             // Create the task
             var task = new Task
@@ -280,14 +350,14 @@ namespace ABKids_BackEnd.Controllers
 
         #region Helper Functions
         [NonAction]
-        private string UploadFile(IFormFile image)
+        private string UploadFile(IFormFile image, string folder)
         {
             if (image == null)
             {
                 return null; // Return null if no file is uploaded (optional profile picture)
             }
 
-            string uploadsFolder = Path.Combine(_webHostEnvironment.ContentRootPath, "Uploads", "ProfilePictures");
+            string uploadsFolder = Path.Combine(_webHostEnvironment.ContentRootPath, "Uploads", folder);
             Directory.CreateDirectory(uploadsFolder);
 
             string uniqueFileName = Guid.NewGuid().ToString() + "_" + image.FileName;

@@ -9,6 +9,8 @@
         public string Status { get; set; }
         public decimal RewardAmount { get; set; }
         public DateTime DateCreated { get; set; }
+
+        public DateTime? DateCompleted { get; set; } 
         public int ParentId { get; set; }
         public int ChildId { get; set; }
     }
