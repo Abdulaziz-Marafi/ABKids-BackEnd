@@ -37,7 +37,11 @@ namespace ABKids_BackEnd.Controllers
         }
         #endregion
 
-        #region Actions
+        #region Get Actions
+
+        #endregion
+
+        #region Post Actions
 
         // POST: api/parent/create-child (Create Child Account)
         [HttpPost("create-child")]
