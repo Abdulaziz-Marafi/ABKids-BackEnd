@@ -269,9 +269,9 @@ namespace ABKids_BackEnd.Controllers
                 Amount = dto.Amount,
                 DateCreated = transaction.DateCreated,
                 SenderAccountId = parentAccount.AccountId,
-                SenderType = TransactionResponseDTO.AccountOwnerType.Parent,
+                SenderType = Transaction.AccountOwnerType.Parent.ToString(),
                 ReceiverAccountId = child.Account.AccountId,
-                ReceiverType = TransactionResponseDTO.AccountOwnerType.Child,
+                ReceiverType = Transaction.AccountOwnerType.Child.ToString(),
                 NewReceiverBalance = child.Account.Balance
             };
 
