@@ -1,10 +1,12 @@
 ﻿using ABKids_BackEnd.Data;
+using ABKids_BackEnd.DTOs.RequestDTOs;
 using ABKids_BackEnd.DTOs.ResponseDTOs;
 using ABKids_BackEnd.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static ABKids_BackEnd.Models.Account;
 using static ABKids_BackEnd.Models.User;
 using Task = ABKids_BackEnd.Models.Task;
 
@@ -68,6 +70,78 @@ namespace ABKids_BackEnd.Controllers
 
         #region Post Actions
 
+        // POST: api/child/savings-goals (Create a Savings Goal)
+        [HttpPost("savings-goals")]
+        public async Task<IActionResult> CreateSavingsGoal([FromForm] CreateSavingsGoalRequestDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var childId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var child = await _userManager.FindByIdAsync(childId);
+            if (child == null || child.Type != UserType.Child)
+            {
+                return Unauthorized(new { Message = "Only children can create savings goals" });
+            }
+
+            // Validate TargetAmount range (20-500 KWD)
+            if (dto.TargetAmount < 20 || dto.TargetAmount > 500)
+            {
+                ModelState.AddModelError("TargetAmount", "Target amount must be between 20 and 500 KWD");
+                return BadRequest(ModelState);
+            }
+
+            // Upload picture if provided
+            string picturePath = UploadFile(dto.SavingsGoalPicture, "SavingsGoalPictures");
+
+            // Create savings goal first
+            var savingsGoal = new SavingsGoal
+            {
+                GoalName = dto.GoalName,
+                TargetAmount = dto.TargetAmount,
+                Status = SavingsGoal.SavingsGoalStatus.InProgress,
+                SavingsGoalPicture = picturePath,
+                DateCreated = DateTime.UtcNow,
+                ChildId = int.Parse(childId)
+            };
+
+            _context.SavingsGoals.Add(savingsGoal);
+            await _context.SaveChangesAsync(); // Save to get SavingsGoalId
+
+            // Create account with OwnerId = SavingsGoalId
+            var goalAccount = new Account
+            {
+                OwnerId = savingsGoal.SavingsGoalId,
+                OwnerType = AccountOwnerType.SavingsGoal,
+                Balance = 0m
+            };
+
+            _context.Accounts.Add(goalAccount);
+            await _context.SaveChangesAsync();
+
+            // Link account to savings goal
+            savingsGoal.AccountId = goalAccount.AccountId;
+            savingsGoal.Account = goalAccount;
+            await _context.SaveChangesAsync();
+
+            var response = new SavingsGoalResponseDTO
+            {
+                SavingsGoalId = savingsGoal.SavingsGoalId,
+                GoalName = savingsGoal.GoalName,
+                TargetAmount = savingsGoal.TargetAmount,
+                Status = savingsGoal.Status.ToString(),
+                SavingsGoalPicture = savingsGoal.SavingsGoalPicture,
+                DateCreated = savingsGoal.DateCreated,
+                DateCompleted = savingsGoal.DateCompleted,
+                ChildId = savingsGoal.ChildId,
+                AccountId = (int)savingsGoal.AccountId,
+                CurrentBalance = goalAccount.Balance
+            };
+
+            return Ok(response);
+        }
 
 
 

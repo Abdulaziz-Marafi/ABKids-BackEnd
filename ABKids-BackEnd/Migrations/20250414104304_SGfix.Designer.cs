@@ -4,6 +4,7 @@ using ABKids_BackEnd.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ABKids_BackEnd.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250414104304_SGfix")]
+    partial class SGfix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,7 +44,7 @@ namespace ABKids_BackEnd.Migrations
 
                     b.HasKey("AccountId");
 
-                    b.HasIndex("OwnerId", "OwnerType")
+                    b.HasIndex("OwnerId")
                         .IsUnique();
 
                     b.ToTable("Accounts");
@@ -88,9 +91,6 @@ namespace ABKids_BackEnd.Migrations
                     b.Property<int?>("AccountId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("AccountId1")
-                        .HasColumnType("int");
-
                     b.Property<int>("ChildId")
                         .HasColumnType("int");
 
@@ -118,10 +118,6 @@ namespace ABKids_BackEnd.Migrations
                     b.HasIndex("AccountId")
                         .IsUnique()
                         .HasFilter("[AccountId] IS NOT NULL");
-
-                    b.HasIndex("AccountId1")
-                        .IsUnique()
-                        .HasFilter("[AccountId1] IS NOT NULL");
 
                     b.HasIndex("ChildId");
 
@@ -440,10 +436,6 @@ namespace ABKids_BackEnd.Migrations
                     b.Property<int?>("ParentId")
                         .HasColumnType("int");
 
-                    b.HasIndex("AccountId")
-                        .IsUnique()
-                        .HasFilter("[AccountId] IS NOT NULL");
-
                     b.HasIndex("ParentId");
 
                     b.ToTable("AspNetUsers", t =>
@@ -462,11 +454,22 @@ namespace ABKids_BackEnd.Migrations
                     b.Property<int?>("AccountId")
                         .HasColumnType("int");
 
-                    b.HasIndex("AccountId")
-                        .IsUnique()
-                        .HasFilter("[AccountId] IS NOT NULL");
-
                     b.HasDiscriminator().HasValue(0);
+                });
+
+            modelBuilder.Entity("ABKids_BackEnd.Models.Account", b =>
+                {
+                    b.HasOne("ABKids_BackEnd.Models.Child", "ChildOwner")
+                        .WithOne("Account")
+                        .HasForeignKey("ABKids_BackEnd.Models.Account", "OwnerId");
+
+                    b.HasOne("ABKids_BackEnd.Models.Parent", "ParentOwner")
+                        .WithOne("Account")
+                        .HasForeignKey("ABKids_BackEnd.Models.Account", "OwnerId");
+
+                    b.Navigation("ChildOwner");
+
+                    b.Navigation("ParentOwner");
                 });
 
             modelBuilder.Entity("ABKids_BackEnd.Models.LoyaltyTransaction", b =>
@@ -483,12 +486,8 @@ namespace ABKids_BackEnd.Migrations
             modelBuilder.Entity("ABKids_BackEnd.Models.SavingsGoal", b =>
                 {
                     b.HasOne("ABKids_BackEnd.Models.Account", "Account")
-                        .WithOne()
-                        .HasForeignKey("ABKids_BackEnd.Models.SavingsGoal", "AccountId");
-
-                    b.HasOne("ABKids_BackEnd.Models.Account", null)
                         .WithOne("SavingsGoal")
-                        .HasForeignKey("ABKids_BackEnd.Models.SavingsGoal", "AccountId1");
+                        .HasForeignKey("ABKids_BackEnd.Models.SavingsGoal", "AccountId");
 
                     b.HasOne("ABKids_BackEnd.Models.Child", "Child")
                         .WithMany("SavingsGoals")
@@ -592,34 +591,15 @@ namespace ABKids_BackEnd.Migrations
 
             modelBuilder.Entity("ABKids_BackEnd.Models.Child", b =>
                 {
-                    b.HasOne("ABKids_BackEnd.Models.Account", "Account")
-                        .WithOne("ChildOwner")
-                        .HasForeignKey("ABKids_BackEnd.Models.Child", "AccountId");
-
                     b.HasOne("ABKids_BackEnd.Models.Parent", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId");
 
-                    b.Navigation("Account");
-
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("ABKids_BackEnd.Models.Parent", b =>
-                {
-                    b.HasOne("ABKids_BackEnd.Models.Account", "Account")
-                        .WithOne("ParentOwner")
-                        .HasForeignKey("ABKids_BackEnd.Models.Parent", "AccountId");
-
-                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("ABKids_BackEnd.Models.Account", b =>
                 {
-                    b.Navigation("ChildOwner");
-
-                    b.Navigation("ParentOwner");
-
                     b.Navigation("ReceivedTransactions");
 
                     b.Navigation("SavingsGoal");
@@ -629,6 +609,9 @@ namespace ABKids_BackEnd.Migrations
 
             modelBuilder.Entity("ABKids_BackEnd.Models.Child", b =>
                 {
+                    b.Navigation("Account")
+                        .IsRequired();
+
                     b.Navigation("LoyaltyTransactions");
 
                     b.Navigation("SavingsGoals");
@@ -638,6 +621,9 @@ namespace ABKids_BackEnd.Migrations
 
             modelBuilder.Entity("ABKids_BackEnd.Models.Parent", b =>
                 {
+                    b.Navigation("Account")
+                        .IsRequired();
+
                     b.Navigation("Children");
 
                     b.Navigation("TasksCreated");
