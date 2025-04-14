@@ -69,39 +69,41 @@ namespace ABKids_BackEnd.Data
                 .HasForeignKey(lt => lt.ChildId);
 
             // Account Relationships
+            // Remove incorrect one-to-one relationships using OwnerId
+            // Instead, define relationships based on OwnerId and OwnerType without foreign key constraints
             modelBuilder.Entity<Account>()
-                .HasOne(a => a.ParentOwner)
-                .WithOne(p => p.Account)
-                .HasForeignKey<Account>(a => a.OwnerId)
-                .IsRequired(false);
+                .Property(a => a.OwnerId)
+                .IsRequired();
 
             modelBuilder.Entity<Account>()
-                .HasOne(a => a.ChildOwner)
-                .WithOne(c => c.Account)
-                .HasForeignKey<Account>(a => a.OwnerId)
-                .IsRequired(false);
+                .Property(a => a.OwnerType)
+                .IsRequired();
 
+            // Add composite unique index on (OwnerId, OwnerType)
             modelBuilder.Entity<Account>()
-                .HasOne(a => a.SavingsGoal)
-                .WithOne(sg => sg.Account)
-                .HasForeignKey<Account>(a => a.OwnerId)
-                .IsRequired(false);
+                .HasIndex(a => new { a.OwnerId, a.OwnerType })
+                .IsUnique();
 
+            // Transactions relationships (Account side)
             modelBuilder.Entity<Account>()
                 .HasMany(a => a.SentTransactions)
                 .WithOne(t => t.SenderAccount)
-                .HasForeignKey(t => t.SenderAccountId);
+                .HasForeignKey(t => t.SenderAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Account>()
                 .HasMany(a => a.ReceivedTransactions)
                 .WithOne(t => t.ReceiverAccount)
-                .HasForeignKey(t => t.ReceiverAccountId);
+                .HasForeignKey(t => t.ReceiverAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // SavingsGoal Relationships
             modelBuilder.Entity<SavingsGoal>()
                 .HasOne(sg => sg.Account)
-                .WithOne(a => a.SavingsGoal)
-                .HasForeignKey<SavingsGoal>(sg => sg.AccountId);
+                .WithOne() // No inverse navigation property needed
+                .HasForeignKey<SavingsGoal>(sg => sg.AccountId)
+                .IsRequired(false); // Keep nullable
+
             // Task Relationships
             modelBuilder.Entity<Task>()
                 .HasOne(t => t.Parent)
