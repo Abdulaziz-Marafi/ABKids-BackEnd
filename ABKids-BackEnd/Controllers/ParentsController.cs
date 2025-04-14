@@ -348,6 +348,107 @@ namespace ABKids_BackEnd.Controllers
 
         #endregion
 
+        #region Put Actions
+
+        // PUT: api/parent/tasks/{taskId}/verify (Verify a Child's Task)
+        [HttpPut("tasks/{taskId}/verify")]
+        public async Task<IActionResult> VerifyTask(int taskId, [FromBody] VerifyTaskRequestDTO dto)
+        {
+            var parentId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var parent = await _userManager.FindByIdAsync(parentId);
+            if (parent == null || parent.Type != UserType.Parent)
+            {
+                return Unauthorized(new { Message = "Only parents can verify tasks" });
+            }
+
+            // Load task with child to verify ownership
+            var task = await _context.Tasks
+                .Include(t => t.Child)
+                .FirstOrDefaultAsync(t => t.TaskId == taskId && t.ParentId == int.Parse(parentId));
+
+            if (task == null)
+            {
+                return NotFound(new { Message = "Task not found or not associated with this parent" });
+            }
+
+            if (task.Status != Task.TaskStatus.Verify)
+            {
+                return BadRequest(new { Message = "Task is not in Verify status" });
+            }
+
+            if (dto.IsAccepted)
+            {
+                // Accept: Move to Completed and pay reward
+                task.Status = Task.TaskStatus.Completed;
+
+                // Load accounts for transaction
+                var parentAccount = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(parentId));
+                if (parentAccount == null)
+                {
+                    return BadRequest(new { Message = "Parent has no associated account" });
+                }
+
+                var childAccount = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.OwnerId == task.ChildId);
+                if (childAccount == null)
+                {
+                    return BadRequest(new { Message = "Child has no associated account" });
+                }
+
+                // Check parent's balance
+                if (parentAccount.Balance < task.RewardAmount)
+                {
+                    return BadRequest(new { Message = "Insufficient funds in parent account" });
+                }
+
+                // Update balances
+                parentAccount.Balance -= task.RewardAmount;
+                childAccount.Balance += task.RewardAmount;
+
+                // Create transaction
+                var transaction = new Transaction
+                {
+                    Amount = task.RewardAmount,
+                    DateCreated = DateTime.UtcNow,
+                    SenderAccountId = parentAccount.AccountId,
+                    SenderAccount = parentAccount,
+                    SenderType = Transaction.AccountOwnerType.Parent,
+                    ReceiverAccountId = childAccount.AccountId,
+                    ReceiverAccount = childAccount,
+                    ReceiverType = Transaction.AccountOwnerType.Child
+                };
+
+                _context.Transactions.Add(transaction);
+            }
+            else
+            {
+                // Reject: Move to Rejected
+                task.Status = Task.TaskStatus.Rejected;
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Prepare response
+            var response = new TaskResponseDTO
+            {
+                TaskId = task.TaskId,
+                TaskName = task.TaskName,
+                TaskDescription = task.TaskDescription,
+                TaskPicture = task.TaskPicture,
+                Status = task.Status.ToString(),
+                RewardAmount = task.RewardAmount,
+                DateCreated = task.DateCreated,
+                DateCompleted = task.DateCompleted,
+                ParentId = task.ParentId,
+                ChildId = task.ChildId
+            };
+
+            return Ok(response);
+        }
+
+        #endregion
+
         #region Helper Functions
         [NonAction]
         private string UploadFile(IFormFile image, string folder)

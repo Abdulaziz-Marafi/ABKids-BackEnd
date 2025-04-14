@@ -26,7 +26,8 @@ namespace ABKids_BackEnd.Models
         public enum SavingsGoalStatus
         {
             InProgress,
-            Completed
+            Completed,
+            Broken
         }
     }
 }
