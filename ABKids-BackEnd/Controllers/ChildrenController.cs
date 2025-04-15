@@ -66,6 +66,38 @@ namespace ABKids_BackEnd.Controllers
             return Ok(tasks);
         }
 
+        // GET: api/children/savings-goals (Get All Savings Goals created by the child)
+        [HttpGet("savings-goals")]
+        public async Task<IActionResult> GetSavingsGoals()
+        {
+            var childId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var child = await _userManager.FindByIdAsync(childId);
+            if (child == null || child.Type != UserType.Child)
+            {
+                return Unauthorized(new { Message = "Only children can view their savings goals" });
+            }
+
+            var savingsGoals = await _context.SavingsGoals
+                .Include(sg => sg.Account) // Include Account for CurrentBalance
+                .Where(sg => sg.ChildId == int.Parse(childId))
+                .Select(sg => new SavingsGoalResponseDTO
+                {
+                    SavingsGoalId = sg.SavingsGoalId,
+                    GoalName = sg.GoalName,
+                    TargetAmount = sg.TargetAmount,
+                    Status = sg.Status.ToString(),
+                    SavingsGoalPicture = sg.SavingsGoalPicture,
+                    DateCreated = sg.DateCreated,
+                    DateCompleted = sg.DateCompleted,
+                    ChildId = sg.ChildId,
+                    AccountId = (int)sg.AccountId,
+                    CurrentBalance = sg.Account != null ? sg.Account.Balance : 0m // Handle null Account
+                })
+                .ToListAsync();
+
+            return Ok(savingsGoals);
+        }
+
         #endregion
 
         #region Post Actions
