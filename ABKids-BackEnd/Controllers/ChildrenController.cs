@@ -36,7 +36,7 @@ namespace ABKids_BackEnd.Controllers
 
         #region Get Actions
 
-        // GET: api/children/tasks (Get All Tasks Assigned to Child User)
+        // GET: api/Children/tasks (Get All Tasks Assigned to Child User)
         [HttpGet("tasks")]
         public async Task<IActionResult> GetTasks()
         {
@@ -67,7 +67,7 @@ namespace ABKids_BackEnd.Controllers
             return Ok(tasks);
         }
 
-        // GET: api/children/savings-goals (Get All Savings Goals created by the child)
+        // GET: api/Children/savings-goals (Get All Savings Goals created by the Child User)
         [HttpGet("savings-goals")]
         public async Task<IActionResult> GetSavingsGoals()
         {
@@ -97,6 +97,36 @@ namespace ABKids_BackEnd.Controllers
                 .ToListAsync();
 
             return Ok(savingsGoals);
+        }
+
+        // GET: api/Children/loyalty-transactions (Get All Loyalty Transactions related to the Child User)
+        [HttpGet("loyalty-transactions")]
+        public async Task<IActionResult> GetLoyaltyTransactions()
+        {
+            // Get the authenticated child
+            var childId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var child = await _userManager.FindByIdAsync(childId);
+            if (child == null || child.Type != UserType.Child)
+            {
+                return Unauthorized(new { Message = "Only children can view loyalty transactions" });
+            }
+
+            // Fetch loyalty transactions
+            var transactions = await _context.LoyaltyTransactions
+                .Where(lt => lt.ChildId == int.Parse(childId))
+                .OrderByDescending(lt => lt.DateCreated) // Newest first
+                .Select(lt => new LoyaltyTransactionResponseDTO
+                {
+                    LoyaltyTransactionId = lt.LoyaltyTransactionId,
+                    Amount = lt.Amount,
+                    LoyaltyTransactionType = lt.TransactionType.ToString(),
+                    Description = lt.description,
+                    DateCreated = lt.DateCreated,
+                    ChildId = lt.ChildId
+                })
+                .ToListAsync();
+
+            return Ok(transactions);
         }
 
         #endregion
