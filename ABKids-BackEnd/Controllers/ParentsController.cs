@@ -229,9 +229,9 @@ namespace ABKids_BackEnd.Controllers
             return BadRequest(ModelState);
         }
 
-        // POST: api/parent/deposit-to-child (Deposit to Child Account)
-        [HttpPost("deposit-to-child")]
-        public async Task<IActionResult> DepositToChildAccount(ChildDepositRequestDTO dto)
+        // POST: api/parent/deposit-to-child/{childId} (Deposit to Child Account)
+        [HttpPost("deposit-to-child/{childId}")]
+        public async Task<IActionResult> DepositToChildAccount(int childId, [FromBody] ChildDepositRequestDTO dto)
         {
             if (!ModelState.IsValid)
             {
@@ -239,9 +239,9 @@ namespace ABKids_BackEnd.Controllers
             }
 
             // Validate amount
-            if (dto.Amount <= 0)
+            if (dto.Amount < 0.01m)
             {
-                ModelState.AddModelError("Amount", "Deposit amount must be positive");
+                ModelState.AddModelError("Amount", "Amount must be positive and cannot deposit an amount less than 0.01");
                 return BadRequest(ModelState);
             }
 
@@ -253,41 +253,39 @@ namespace ABKids_BackEnd.Controllers
                 return Unauthorized(new { Message = "Only parents can deposit to child accounts" });
             }
 
-            // Load parent's account
+            // Load parent's account using composite key
             var parentAccount = await _context.Accounts
-                .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(parentId));
+                .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(parentId) && a.OwnerType == AccountOwnerType.Parent);
             if (parentAccount == null)
             {
                 return BadRequest(new { Message = "Parent has no associated account" });
             }
 
-            // Check if parent has sufficient balance (optional rule)
+            // Check if parent has sufficient balance
             if (parentAccount.Balance < dto.Amount)
             {
                 return BadRequest(new { Message = "Insufficient funds in parent account" });
-            }else if (dto.Amount < 0.01m)
-            {
-                return BadRequest(new { Message = "Cannot deposit an amount less than 0.01" });
             }
 
             // Find the child and verify they belong to this parent
             var child = await _context.Users.OfType<Child>()
-                .Include(c => c.Account)
-                .FirstOrDefaultAsync(c => c.Id == dto.ChildId && c.ParentId == int.Parse(parentId));
-
+                .FirstOrDefaultAsync(c => c.Id == childId && c.ParentId == int.Parse(parentId));
             if (child == null)
             {
                 return NotFound(new { Message = "Child not found or not associated with this parent" });
             }
 
-            if (child.Account == null)
+            // Load child's account using composite key
+            var childAccount = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.OwnerId == childId && a.OwnerType == AccountOwnerType.Child);
+            if (childAccount == null)
             {
                 return BadRequest(new { Message = "Child has no associated account" });
             }
 
             // Update balances
             parentAccount.Balance -= dto.Amount;
-            child.Account.Balance += dto.Amount;
+            childAccount.Balance += dto.Amount;
 
             // Create a transaction record
             var transaction = new Transaction
@@ -296,10 +294,10 @@ namespace ABKids_BackEnd.Controllers
                 DateCreated = DateTime.UtcNow,
                 SenderAccountId = parentAccount.AccountId,
                 SenderAccount = parentAccount,
-                SenderType = Transaction.AccountOwnerType.Parent,
-                ReceiverAccountId = child.Account.AccountId,
-                ReceiverAccount = child.Account,
-                ReceiverType = Transaction.AccountOwnerType.Child
+                SenderType = (Transaction.AccountOwnerType)AccountOwnerType.Parent,
+                ReceiverAccountId = childAccount.AccountId,
+                ReceiverAccount = childAccount,
+                ReceiverType = (Transaction.AccountOwnerType)AccountOwnerType.Child
             };
 
             _context.Transactions.Add(transaction);
@@ -308,18 +306,17 @@ namespace ABKids_BackEnd.Controllers
             var response = new TransactionResponseDTO
             {
                 TransactionId = transaction.TransactionId,
-                Amount = dto.Amount,
+                Amount = transaction.Amount,
                 DateCreated = transaction.DateCreated,
-                SenderAccountId = parentAccount.AccountId,
-                SenderType = Transaction.AccountOwnerType.Parent.ToString(),
-                ReceiverAccountId = child.Account.AccountId,
-                ReceiverType = Transaction.AccountOwnerType.Child.ToString(),
-                NewReceiverBalance = child.Account.Balance
+                SenderAccountId = transaction.SenderAccountId,
+                SenderType = transaction.SenderType.ToString(),
+                ReceiverAccountId = transaction.ReceiverAccountId,
+                ReceiverType = transaction.ReceiverType.ToString(),
+                NewReceiverBalance = childAccount.Balance
             };
 
             return Ok(response);
         }
-
         // POST: api/parent/create-task (Create a Task for a Child)
         [HttpPost("create-task")]
         public async Task<IActionResult> CreateTask([FromForm] CreateTaskRequestDTO dto)

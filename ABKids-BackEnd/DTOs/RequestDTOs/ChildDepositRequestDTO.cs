@@ -7,6 +7,6 @@ namespace ABKids_BackEnd.DTOs.RequestDTOs
         // Range of 0.01 to 10000.00
         [Range(0.01, 10000.00, ErrorMessage = "Amount must be between 0.01 and 10000.00")]
         public decimal Amount { get; set; }
-        public int ChildId { get; set; }
+        public int? ChildId { get; set; }
     }
 }
