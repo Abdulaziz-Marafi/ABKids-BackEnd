@@ -314,7 +314,7 @@ namespace ABKids_BackEnd.Controllers
 
             await _context.SaveChangesAsync();
 
-            var response = new DepositToGoalResponseDTO
+            var response = new SavingsGoalResponseDTO
             {
                 SavingsGoalId = savingsGoal.SavingsGoalId,
                 GoalName = savingsGoal.GoalName,
@@ -327,6 +327,98 @@ namespace ABKids_BackEnd.Controllers
                 AccountId = (int)savingsGoal.AccountId,
                 CurrentBalance = savingsGoal.Account.Balance,
                 Message = depositAmount < dto.Amount ? $"Deposit capped at {depositAmount:F2} KWD to meet target" : null
+            };
+
+            return Ok(response);
+        }
+
+        // POST: api/Children/savings-goals/{goalId}/break (Break a Savings Goal)
+        [HttpPost("savings-goals/{goalId}/break")]
+        public async Task<IActionResult> BreakSavingsGoal(int goalId)
+        {
+            // Get the authenticated child
+            var childId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var child = await _userManager.FindByIdAsync(childId);
+            if (child == null || child.Type != UserType.Child)
+            {
+                return Unauthorized(new { Message = "Only children can break savings goals" });
+            }
+
+            // Fetch child account using composite key
+            var childAccount = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(childId) && a.OwnerType == AccountOwnerType.Child);
+            if (childAccount == null)
+            {
+                return BadRequest(new { Message = "Child has no associated account" });
+            }
+
+            // Fetch savings goal and its account
+            var savingsGoal = await _context.SavingsGoals
+                .Include(sg => sg.Account)
+                .FirstOrDefaultAsync(sg => sg.SavingsGoalId == goalId && sg.ChildId == int.Parse(childId));
+            if (savingsGoal == null)
+            {
+                return NotFound(new { Message = "Savings goal not found or not associated with this child" });
+            }
+
+            if (savingsGoal.Status != SavingsGoal.SavingsGoalStatus.InProgress)
+            {
+                return BadRequest(new { Message = "Savings goal is not in progress" });
+            }
+
+            if (!savingsGoal.AccountId.HasValue || savingsGoal.Account == null)
+            {
+                return BadRequest(new { Message = "Savings goal has no associated account" });
+            }
+
+            // Verify savings goal account's composite key
+            if (savingsGoal.Account.OwnerId != savingsGoal.SavingsGoalId || savingsGoal.Account.OwnerType != AccountOwnerType.SavingsGoal)
+            {
+                return BadRequest(new { Message = "Savings goal account has incorrect OwnerId or OwnerType" });
+            }
+
+            // Transfer balance to child account
+            var transferAmount = savingsGoal.Account.Balance;
+            if (transferAmount > 0)
+            {
+                childAccount.Balance += transferAmount;
+                savingsGoal.Account.Balance = 0m;
+
+                // Create transaction: SavingsGoal → Child
+                var transaction = new Transaction
+                {
+                    Amount = transferAmount,
+                    DateCreated = DateTime.UtcNow,
+                    SenderAccountId = savingsGoal.AccountId.Value,
+                    SenderAccount = savingsGoal.Account,
+                    SenderType = (Transaction.AccountOwnerType)AccountOwnerType.SavingsGoal,
+                    ReceiverAccountId = childAccount.AccountId,
+                    ReceiverAccount = childAccount,
+                    ReceiverType = (Transaction.AccountOwnerType)AccountOwnerType.Child
+                };
+
+                _context.Transactions.Add(transaction);
+            }
+
+            // Update savings goal status
+            savingsGoal.Status = SavingsGoal.SavingsGoalStatus.Broken;
+            savingsGoal.DateCompleted = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var response = new SavingsGoalResponseDTO
+            {
+                SavingsGoalId = savingsGoal.SavingsGoalId,
+                GoalName = savingsGoal.GoalName,
+                TargetAmount = savingsGoal.TargetAmount,
+                Status = savingsGoal.Status.ToString(),
+                SavingsGoalPicture = savingsGoal.SavingsGoalPicture,
+                DateCreated = savingsGoal.DateCreated,
+                DateCompleted = savingsGoal.DateCompleted,
+                ChildId = savingsGoal.ChildId,
+                AccountId = (int)savingsGoal.AccountId,
+                CurrentBalance = savingsGoal.Account.Balance,
+                Message = transferAmount > 0 ? $"Transferred {transferAmount:F2} KWD back to child account" : "Savings goal broken with no funds to transfer"
             };
 
             return Ok(response);
