@@ -129,7 +129,7 @@ namespace ABKids_BackEnd.Controllers
             {
                 return NotFound(new { Message = "Child not found or not associated with this parent" });
             }
-
+            // TODO FIX THIS!!
             var savingsGoals = await _context.SavingsGoals
                 .Include(sg => sg.Account)
                 .Where(sg => sg.ChildId == childId)
@@ -203,8 +203,8 @@ namespace ABKids_BackEnd.Controllers
                 // Create a default account for the child
                 var account = new Account
                 {
-                    OwnerId = child.Id,
-                    OwnerType = AccountOwnerType.Child,
+                    OwnerId = child.Id, // Composite Key with OwnerType
+                    OwnerType = AccountOwnerType.Child, // Composite Key with OwnerId
                     Balance = 0m
                 };
                 child.Account = account;

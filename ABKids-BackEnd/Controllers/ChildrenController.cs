@@ -99,6 +99,8 @@ namespace ABKids_BackEnd.Controllers
             return Ok(savingsGoals);
         }
 
+        // Maybe add a Get method just for SG balance alone?
+
         // GET: api/Children/loyalty-transactions (Get All Loyalty Transactions related to the Child User)
         [HttpGet("loyalty-transactions")]
         public async Task<IActionResult> GetLoyaltyTransactions()

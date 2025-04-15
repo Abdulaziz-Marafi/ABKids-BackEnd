@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static ABKids_BackEnd.Models.Account;
 using static ABKids_BackEnd.Models.User;
 
 namespace ABKids_BackEnd.Controllers
@@ -45,7 +46,7 @@ namespace ABKids_BackEnd.Controllers
 
             // Find the user's account
             var account = await _context.Accounts
-                .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(userId));
+                .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(userId) && (a.OwnerType == AccountOwnerType.Child || a.OwnerType == AccountOwnerType.Parent));
             if (account == null)
             {
                 return NotFound(new { Message = "No account found for this user" });
@@ -70,5 +71,6 @@ namespace ABKids_BackEnd.Controllers
             return Ok(transactions);
         }
             #endregion
-        }
+        
+    }
 }
