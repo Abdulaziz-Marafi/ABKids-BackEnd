@@ -12,5 +12,7 @@
         public int ChildId { get; set; }
         public int AccountId { get; set; }
         public decimal CurrentBalance { get; set; }
+
+        public string? Message { get; set; }
     }
 }
