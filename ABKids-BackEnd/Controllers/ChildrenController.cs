@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static ABKids_BackEnd.Models.Account;
+using static ABKids_BackEnd.Models.LoyaltyTransaction;
 using static ABKids_BackEnd.Models.User;
 using Task = ABKids_BackEnd.Models.Task;
 
@@ -102,7 +103,7 @@ namespace ABKids_BackEnd.Controllers
 
         #region Post Actions
 
-        // POST: api/child/savings-goals (Create a Savings Goal)
+        // POST: api/Children/savings-goals (Create a Savings Goal)
         [HttpPost("savings-goals")]
         public async Task<IActionResult> CreateSavingsGoal([FromForm] CreateSavingsGoalRequestDTO dto)
         {
@@ -175,8 +176,161 @@ namespace ABKids_BackEnd.Controllers
             return Ok(response);
         }
 
+        // POST: api/Children/{goalId}/deposit (Deposit to a Savings Goal)
+        [HttpPost("savings-goals/{goalId}/deposit")]
+        public async Task<IActionResult> DepositToSavingsGoal(int goalId, [FromBody] DepositToSavingsGoalRequestDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
+            // Validate amount
+            if (dto.Amount <= 0)
+            {
+                ModelState.AddModelError("Amount", "Deposit amount must be positive");
+                return BadRequest(ModelState);
+            }
 
+            // Fetch authenticated child
+            var childId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var child = await _userManager.FindByIdAsync(childId);
+            if (child == null || child.Type != UserType.Child)
+            {
+                return Unauthorized(new { Message = "Only children can deposit to savings goals" });
+            }
+
+            // Fetch child account
+            var childAccount = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(childId) && a.OwnerType == AccountOwnerType.Child);
+            if (childAccount == null)
+            {
+                return BadRequest(new { Message = "Child has no associated account" });
+            }
+
+            // Fetch savings goal and its account
+            var savingsGoal = await _context.SavingsGoals
+                .Include(sg => sg.Account)
+                .FirstOrDefaultAsync(sg => sg.SavingsGoalId == goalId && sg.ChildId == int.Parse(childId));
+            if (savingsGoal == null)
+            {
+                return NotFound(new { Message = "Savings goal not found or not associated with this child" });
+            }
+
+            if (savingsGoal.Status != SavingsGoal.SavingsGoalStatus.InProgress)
+            {
+                return BadRequest(new { Message = "Savings goal is not in progress" });
+            }
+
+            if (!savingsGoal.AccountId.HasValue || savingsGoal.Account == null)
+            {
+                return BadRequest(new { Message = "Savings goal has no associated account" });
+            }
+
+            // Verify savings goal account's OwnerId and OwnerType
+            if (savingsGoal.Account.OwnerId != savingsGoal.SavingsGoalId || savingsGoal.Account.OwnerType != AccountOwnerType.SavingsGoal)
+            {
+                return BadRequest(new { Message = "Savings goal account has incorrect OwnerId or OwnerType" });
+            }
+
+            // Calculate remaining amount needed
+            var remainingAmount = savingsGoal.TargetAmount - savingsGoal.Account.Balance;
+            if (remainingAmount <= 0)
+            {
+                return BadRequest(new { Message = "Savings goal is already at or above target amount" });
+            }
+
+            // Cap deposit at remaining amount
+            var depositAmount = Math.Min(dto.Amount, remainingAmount);
+
+            // Verify sufficient funds
+            if (childAccount.Balance < depositAmount)
+            {
+                return BadRequest(new { Message = "Insufficient funds in child account" });
+            }
+
+            // Perform deposit
+            childAccount.Balance -= depositAmount;
+            savingsGoal.Account.Balance += depositAmount;
+
+            // Create transaction: Child → SavingsGoal
+            var depositTransaction = new Transaction
+            {
+                Amount = depositAmount,
+                DateCreated = DateTime.UtcNow,
+                SenderAccountId = childAccount.AccountId,
+                SenderAccount = childAccount,
+                SenderType = (Transaction.AccountOwnerType)AccountOwnerType.Child,
+                ReceiverAccountId = savingsGoal.AccountId.Value,
+                ReceiverAccount = savingsGoal.Account,
+                ReceiverType = (Transaction.AccountOwnerType)AccountOwnerType.SavingsGoal
+            };
+
+            _context.Transactions.Add(depositTransaction);
+
+            // Check for completion
+            if (savingsGoal.Account.Balance >= savingsGoal.TargetAmount)
+            {
+                savingsGoal.Status = SavingsGoal.SavingsGoalStatus.Completed;
+                savingsGoal.DateCompleted = DateTime.UtcNow;
+
+                // Transfer balance back to child
+                var returnAmount = savingsGoal.Account.Balance;
+                childAccount.Balance += returnAmount;
+                savingsGoal.Account.Balance = 0m;
+
+                // Create transaction: SavingsGoal → Child
+                var completionTransaction = new Transaction
+                {
+                    Amount = returnAmount,
+                    DateCreated = DateTime.UtcNow,
+                    SenderAccountId = savingsGoal.AccountId.Value,
+                    SenderAccount = savingsGoal.Account,
+                    SenderType = (Transaction.AccountOwnerType)AccountOwnerType.SavingsGoal,
+                    ReceiverAccountId = childAccount.AccountId,
+                    ReceiverAccount = childAccount,
+                    ReceiverType = (Transaction.AccountOwnerType)AccountOwnerType.Child
+                };
+
+                _context.Transactions.Add(completionTransaction);
+
+                // Award loyalty points: TargetAmount / 2 * 10
+                var loyaltyPoints = (int)(savingsGoal.TargetAmount / 2);
+                savingsGoal.Child.LoyaltyPoints += loyaltyPoints;
+
+                // Create loyalty transaction
+                var loyaltyTransaction = new LoyaltyTransaction
+                {
+                    Amount = loyaltyPoints,
+                    TransactionType = LoyaltyTransactionType.Earned,
+                    description = $"Earned {loyaltyPoints} points for completing savings goal '{savingsGoal.GoalName}' on {savingsGoal.DateCompleted:yyyy-MM-dd}",
+                    DateCreated = DateTime.UtcNow,
+                    ChildId = savingsGoal.ChildId,
+                    Child = savingsGoal.Child
+                };
+
+                _context.LoyaltyTransactions.Add(loyaltyTransaction);
+            }
+
+            await _context.SaveChangesAsync();
+
+            var response = new DepositToGoalResponseDTO
+            {
+                SavingsGoalId = savingsGoal.SavingsGoalId,
+                GoalName = savingsGoal.GoalName,
+                TargetAmount = savingsGoal.TargetAmount,
+                Status = savingsGoal.Status.ToString(),
+                SavingsGoalPicture = savingsGoal.SavingsGoalPicture,
+                DateCreated = savingsGoal.DateCreated,
+                DateCompleted = savingsGoal.DateCompleted,
+                ChildId = savingsGoal.ChildId,
+                AccountId = (int)savingsGoal.AccountId,
+                CurrentBalance = savingsGoal.Account.Balance,
+                Message = depositAmount < dto.Amount ? $"Deposit capped at {depositAmount:F2} KWD to meet target" : null
+            };
+
+            return Ok(response);
+        }
         #endregion
 
         #region Put Actions
