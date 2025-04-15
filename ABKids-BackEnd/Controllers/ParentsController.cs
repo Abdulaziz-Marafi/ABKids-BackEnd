@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using static ABKids_BackEnd.Models.Account;
 using static ABKids_BackEnd.Models.User;
@@ -107,6 +108,47 @@ namespace ABKids_BackEnd.Controllers
                 .ToListAsync();
 
             return Ok(tasks);
+        }
+
+        // GET: api/parent/savings-goals/{childId} (Get All Savings Goals associated with one child)
+        [HttpGet("savings-goals/{childId}")]
+        public async Task<IActionResult> GetSavingsGoalsForChild(int childId)
+        {
+            var parentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var parent = await _userManager.FindByIdAsync(parentId);
+            if (parent == null || parent.Type != UserType.Parent)
+            {
+                return Unauthorized(new { Message = "Only parents can view savings goals" });
+            }
+
+            // Verify child belongs to parent
+            var child = await _context.Users
+                .OfType<Child>()
+                .FirstOrDefaultAsync(c => c.Id == childId && c.ParentId == int.Parse(parentId));
+            if (child == null)
+            {
+                return NotFound(new { Message = "Child not found or not associated with this parent" });
+            }
+
+            var savingsGoals = await _context.SavingsGoals
+                .Include(sg => sg.Account)
+                .Where(sg => sg.ChildId == childId)
+                .Select(sg => new SavingsGoalResponseDTO
+                {
+                    SavingsGoalId = sg.SavingsGoalId,
+                    GoalName = sg.GoalName,
+                    TargetAmount = sg.TargetAmount,
+                    Status = sg.Status.ToString(),
+                    SavingsGoalPicture = sg.SavingsGoalPicture,
+                    DateCreated = sg.DateCreated,
+                    DateCompleted = sg.DateCompleted,
+                    ChildId = sg.ChildId,
+                    AccountId = (int)sg.AccountId,
+                    CurrentBalance = sg.Account != null ? sg.Account.Balance : 0m
+                })
+                .ToListAsync();
+
+            return Ok(savingsGoals);
         }
 
         #endregion
