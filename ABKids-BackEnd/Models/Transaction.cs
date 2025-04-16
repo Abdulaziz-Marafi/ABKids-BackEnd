@@ -23,7 +23,8 @@ namespace ABKids_BackEnd.Models
         {
             Parent,
             Child,
-            SavingsGoal
+            SavingsGoal,
+            RewardSystem
         }
 
     }

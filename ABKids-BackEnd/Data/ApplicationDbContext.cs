@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using static ABKids_BackEnd.Models.Account;
 using static ABKids_BackEnd.Models.User;
 using Task = ABKids_BackEnd.Models.Task;
 
@@ -21,6 +22,21 @@ namespace ABKids_BackEnd.Data
         public DbSet<Task> Tasks { get; set; }
         public DbSet<LoyaltyTransaction> LoyaltyTransactions { get; set; }
         public DbSet<Reward> Rewards { get; set; }
+
+        public static void Seed(ApplicationDbContext context)
+        {
+            // Seed RewardSystem account
+            if (!context.Accounts.Any(a => a.OwnerType == AccountOwnerType.RewardSystem))
+            {
+                context.Accounts.Add(new Account
+                {
+                    OwnerId = 0, // Unique, not tied to a user
+                    OwnerType = AccountOwnerType.RewardSystem,
+                    Balance = 0m // No funds needed
+                });
+            }
+            context.SaveChanges();
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

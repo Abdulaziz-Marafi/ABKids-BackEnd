@@ -8,7 +8,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static ABKids_BackEnd.Models.Account;
+using static ABKids_BackEnd.Models.LoyaltyTransaction;
 using static ABKids_BackEnd.Models.User;
+using static ABKids_BackEnd.Models.Transaction;
 
 namespace ABKids_BackEnd.Controllers
 {
@@ -105,7 +108,106 @@ namespace ABKids_BackEnd.Controllers
 
             return CreatedAtAction(nameof(GetAllRewards), new { id = reward.RewardId }, response);
         }
+
+        [HttpPost("convert-points")]
+        [Authorize]
+        public async Task<IActionResult> ConvertPointsToMoney([FromBody] ConvertPointsRequestDTO dto)
+        {
+            // Get authenticated child
+            var childId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(childId))
+            {
+                return Unauthorized(new { Message = "User not authenticated" });
+            }
+
+            var user = await _userManager.FindByIdAsync(childId);
+            if (user == null || user.Type != UserType.Child)
+            {
+                return Unauthorized(new { Message = "Only children can convert loyalty points" });
+            }
+
+            var child = (Child)user; // Cast for LoyaltyPoints
+
+            // Validate points
+            if (dto.PointsToConvert <= 0)
+            {
+                return BadRequest(new { Message = "Points to convert must be positive" });
+            }
+
+            if (dto.PointsToConvert % 10 != 0)
+            {
+                return BadRequest(new { Message = "Points to convert must be a multiple of 10" });
+            }
+
+            if (child.LoyaltyPoints < dto.PointsToConvert)
+            {
+                return BadRequest(new { Message = $"Insufficient loyalty points. Required: {dto.PointsToConvert}, Available: {child.LoyaltyPoints}" });
+            }
+
+            // Fetch child account using composite key
+            var childAccount = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(childId) && a.OwnerType == Account.AccountOwnerType.Child);
+            if (childAccount == null)
+            {
+                return BadRequest(new { Message = "Child has no associated account" });
+            }
+
+            // Fetch RewardSystem account
+            var rewardSystemAccount = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.OwnerType == Account.AccountOwnerType.RewardSystem);
+            if (rewardSystemAccount == null)
+            {
+                return StatusCode(500, new { Message = "RewardSystem account not configured" });
+            }
+
+            // Calculate money (10 points = 1 KWD)
+            var moneyReceived = dto.PointsToConvert / 10m;
+
+            // Deduct points and add money
+            child.LoyaltyPoints -= dto.PointsToConvert;
+            childAccount.Balance += moneyReceived;
+
+            // Create loyalty transaction
+            var loyaltyTransaction = new LoyaltyTransaction
+            {
+                Amount = dto.PointsToConvert,
+                TransactionType = LoyaltyTransactionType.Spent,
+                description = $"Converted {dto.PointsToConvert} loyalty points to {moneyReceived:F2} KWD",
+                DateCreated = DateTime.UtcNow,
+                ChildId = int.Parse(childId),
+                Child = child
+            };
+
+            // Create transaction
+            var transaction = new Transaction
+            {
+                Amount = moneyReceived,
+                DateCreated = DateTime.UtcNow,
+                SenderAccountId = rewardSystemAccount.AccountId, // Use seeded account
+                SenderAccount = rewardSystemAccount,
+                SenderType = Transaction.AccountOwnerType.RewardSystem,
+                ReceiverAccountId = childAccount.AccountId,
+                ReceiverAccount = childAccount,
+                ReceiverType = Transaction.AccountOwnerType.Child
+            };
+
+            _context.LoyaltyTransactions.Add(loyaltyTransaction);
+            _context.Transactions.Add(transaction);
+            await _context.SaveChangesAsync();
+
+            var response = new ConvertPointsResponseDTO
+            {
+                PointsConverted = dto.PointsToConvert,
+                MoneyReceived = moneyReceived,
+                RemainingPoints = child.LoyaltyPoints,
+                NewBalance = childAccount.Balance,
+                Message = $"Successfully converted {dto.PointsToConvert} points to {moneyReceived:F2} KWD"
+            };
+
+            return Ok(response);
+        }
         #endregion
+
 
         #region Helper Functions
         [NonAction]
