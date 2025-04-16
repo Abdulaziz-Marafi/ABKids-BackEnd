@@ -24,7 +24,8 @@
         {
             Parent,
             Child,
-            SavingsGoal
+            SavingsGoal,
+            RewardSystem
         }
 
     }
