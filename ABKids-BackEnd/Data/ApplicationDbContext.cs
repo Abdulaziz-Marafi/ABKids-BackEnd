@@ -20,6 +20,7 @@ namespace ABKids_BackEnd.Data
         public DbSet<SavingsGoal> SavingsGoals { get; set; }
         public DbSet<Task> Tasks { get; set; }
         public DbSet<LoyaltyTransaction> LoyaltyTransactions { get; set; }
+        public DbSet<Reward> Rewards { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
