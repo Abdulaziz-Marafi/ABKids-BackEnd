@@ -74,7 +74,7 @@ namespace ABKids_BackEnd.Controllers
                 var account = new Account
                 {
                     OwnerId = parent.Id, // Set the OwnerId to the Parent's Id
-                    OwnerType = AccountOwnerType.Parent,
+                    OwnerType = AccountOwnerType.Parent, // Composite Key with OwnerId
                     Balance = 10000m
                 };
 
