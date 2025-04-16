@@ -206,6 +206,63 @@ namespace ABKids_BackEnd.Controllers
 
             return Ok(response);
         }
+
+        [HttpPost("redeem/{rewardId}")]
+        [Authorize]
+        public async Task<IActionResult> RedeemReward(int rewardId)
+        {
+            var childId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(childId))
+            {
+                return Unauthorized(new { Message = "User not authenticated" });
+            }
+
+            var user = await _userManager.FindByIdAsync(childId);
+            if (user == null || user.Type != UserType.Child)
+            {
+                return Unauthorized(new { Message = "Only children can redeem rewards" });
+            }
+
+            var child = (Child)user;
+
+            var reward = await _context.Rewards
+                .FirstOrDefaultAsync(r => r.RewardId == rewardId);
+            if (reward == null)
+            {
+                return NotFound(new { Message = "Reward not found" });
+            }
+
+            if (child.LoyaltyPoints < reward.RewardPrice)
+            {
+                return BadRequest(new { Message = $"Insufficient loyalty points. Required: {reward.RewardPrice}, Available: {child.LoyaltyPoints}" });
+            }
+
+            child.LoyaltyPoints -= reward.RewardPrice;
+
+            var loyaltyTransaction = new LoyaltyTransaction
+            {
+                Amount = reward.RewardPrice,
+                TransactionType = LoyaltyTransactionType.Spent,
+                description = $"Spent {reward.RewardPrice} points to redeem '{reward.RewardName}'",
+                DateCreated = DateTime.UtcNow,
+                ChildId = int.Parse(childId),
+                Child = child
+            };
+
+            _context.LoyaltyTransactions.Add(loyaltyTransaction);
+            await _context.SaveChangesAsync();
+
+            var response = new RedeemRewardResponseDTO
+            {
+                RewardId = reward.RewardId,
+                RewardName = reward.RewardName,
+                PointsSpent = reward.RewardPrice,
+                RemainingPoints = child.LoyaltyPoints,
+                Message = $"Successfully redeemed '{reward.RewardName}', Spent {reward.RewardPrice} 3yali Points"
+            };
+
+            return Ok(response);
+        }
         #endregion
 
 
