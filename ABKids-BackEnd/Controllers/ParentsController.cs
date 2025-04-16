@@ -114,7 +114,13 @@ namespace ABKids_BackEnd.Controllers
         [HttpGet("savings-goals/{childId}")]
         public async Task<IActionResult> GetSavingsGoalsForChild(int childId)
         {
+            // Get authenticated parent
             var parentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(parentId))
+            {
+                return Unauthorized(new { Message = "User not authenticated" });
+            }
+
             var parent = await _userManager.FindByIdAsync(parentId);
             if (parent == null || parent.Type != UserType.Parent)
             {
@@ -129,28 +135,36 @@ namespace ABKids_BackEnd.Controllers
             {
                 return NotFound(new { Message = "Child not found or not associated with this parent" });
             }
-            // TODO FIX THIS!!
+
+            // Fetch savings goals with accounts
             var savingsGoals = await _context.SavingsGoals
                 .Include(sg => sg.Account)
                 .Where(sg => sg.ChildId == childId)
-                .Select(sg => new SavingsGoalResponseDTO
+                .Select(sg => new
                 {
-                    SavingsGoalId = sg.SavingsGoalId,
-                    GoalName = sg.GoalName,
-                    TargetAmount = sg.TargetAmount,
-                    Status = sg.Status.ToString(),
-                    SavingsGoalPicture = sg.SavingsGoalPicture,
-                    DateCreated = sg.DateCreated,
-                    DateCompleted = sg.DateCompleted,
-                    ChildId = sg.ChildId,
-                    AccountId = (int)sg.AccountId,
-                    CurrentBalance = sg.Account != null ? sg.Account.Balance : 0m
+                    SavingsGoal = sg,
+                    IsValidAccount = sg.Account != null && sg.AccountId.HasValue &&
+                                   sg.Account.OwnerId == sg.SavingsGoalId &&
+                                   sg.Account.OwnerType == AccountOwnerType.SavingsGoal
+                })
+                .Select(x => new SavingsGoalResponseDTO
+                {
+                    SavingsGoalId = x.SavingsGoal.SavingsGoalId,
+                    GoalName = x.SavingsGoal.GoalName,
+                    TargetAmount = x.SavingsGoal.TargetAmount,
+                    Status = x.SavingsGoal.Status.ToString(),
+                    SavingsGoalPicture = x.SavingsGoal.SavingsGoalPicture,
+                    DateCreated = x.SavingsGoal.DateCreated,
+                    DateCompleted = x.SavingsGoal.DateCompleted,
+                    ChildId = x.SavingsGoal.ChildId,
+                    AccountId = (int)x.SavingsGoal.AccountId, // Nullable int? as per model
+                    CurrentBalance = x.IsValidAccount ? x.SavingsGoal.Account.Balance : 0m,
+                    Message = x.SavingsGoal.AccountId.HasValue && !x.IsValidAccount ? "Account misconfigured" : null
                 })
                 .ToListAsync();
 
             return Ok(savingsGoals);
         }
-
         #endregion
 
         #region Post Actions
@@ -419,10 +433,11 @@ namespace ABKids_BackEnd.Controllers
             {
                 // Accept: Move to Completed and pay reward
                 task.Status = Task.TaskStatus.Completed;
+                task.DateCompleted = DateTime.UtcNow;
 
                 // Load accounts for transaction
-                var parentAccount = await _context.Accounts
-                    .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(parentId));
+                var parentAccount = await _context.Accounts 
+                    .FirstOrDefaultAsync(a => a.OwnerId == int.Parse(parentId) && a.OwnerType == AccountOwnerType.Parent);
                 if (parentAccount == null)
                 {
                     return BadRequest(new { Message = "Parent has no associated account" });
@@ -464,6 +479,7 @@ namespace ABKids_BackEnd.Controllers
             {
                 // Reject: Move to Rejected
                 task.Status = Task.TaskStatus.Rejected;
+                task.DateCompleted = DateTime.UtcNow;
             }
 
             await _context.SaveChangesAsync();
