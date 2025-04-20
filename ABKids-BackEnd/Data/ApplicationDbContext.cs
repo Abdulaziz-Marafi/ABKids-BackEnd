@@ -52,7 +52,7 @@ namespace ABKids_BackEnd.Data
             modelBuilder.Entity<Parent>()
                 .HasOne(p => p.Account)
                 .WithOne(a => a.ParentOwner)
-                .HasForeignKey<Parent>(p => p.AccountId);
+                .HasForeignKey<Parent>(p => p.ParentAccountId);
 
             modelBuilder.Entity<Parent>()
                 .HasMany(p => p.Children)
@@ -68,7 +68,7 @@ namespace ABKids_BackEnd.Data
             modelBuilder.Entity<Child>()
                 .HasOne(c => c.Account)
                 .WithOne(a => a.ChildOwner)
-                .HasForeignKey<Child>(c => c.AccountId);
+                .HasForeignKey<Child>(c => c.ChildAccountId);
 
             modelBuilder.Entity<Child>()
                 .HasMany(c => c.SavingsGoals)
@@ -118,7 +118,7 @@ namespace ABKids_BackEnd.Data
             modelBuilder.Entity<SavingsGoal>()
                 .HasOne(sg => sg.Account)
                 .WithOne() // No inverse navigation property needed
-                .HasForeignKey<SavingsGoal>(sg => sg.AccountId)
+                .HasForeignKey<SavingsGoal>(sg => sg.SavingsGoalAccountId)
                 .IsRequired(false); // Keep nullable
 
             // Task Relationships

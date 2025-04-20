@@ -143,7 +143,7 @@ namespace ABKids_BackEnd.Controllers
                 .Select(sg => new
                 {
                     SavingsGoal = sg,
-                    IsValidAccount = sg.Account != null && sg.AccountId.HasValue &&
+                    IsValidAccount = sg.Account != null && sg.SavingsGoalAccountId != null &&
                                    sg.Account.OwnerId == sg.SavingsGoalId &&
                                    sg.Account.OwnerType == AccountOwnerType.SavingsGoal
                 })
@@ -157,9 +157,9 @@ namespace ABKids_BackEnd.Controllers
                     DateCreated = x.SavingsGoal.DateCreated,
                     DateCompleted = x.SavingsGoal.DateCompleted,
                     ChildId = x.SavingsGoal.ChildId,
-                    AccountId = (int)x.SavingsGoal.AccountId, // Nullable int? as per model
+                    AccountId = (int)x.SavingsGoal.SavingsGoalAccountId, // Nullable int? as per model
                     CurrentBalance = x.IsValidAccount ? x.SavingsGoal.Account.Balance : 0m,
-                    Message = x.SavingsGoal.AccountId.HasValue && !x.IsValidAccount ? "Account misconfigured" : null
+                    Message = x.SavingsGoal.SavingsGoalAccountId != null && !x.IsValidAccount ? "Account misconfigured" : null
                 })
                 .ToListAsync();
 
@@ -229,10 +229,6 @@ namespace ABKids_BackEnd.Controllers
                 {
                     Message = "Child account created successfully",
                     ChildId = child.Id,
-                    //Email = child.Email,
-                    //FirstName = child.FirstName,
-                    //LastName = child.LastName,
-                    //ParentId = child.ParentId
                 });
             }
 

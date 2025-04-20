@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ABKids_BackEnd.Migrations
 {
     /// <inheritdoc />
-    public partial class SetupTest1 : Migration
+    public partial class test1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -27,42 +27,19 @@ namespace ABKids_BackEnd.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AspNetUsers",
+                name: "Rewards",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    RewardId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ProfilePicture = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Type = table.Column<int>(type: "int", nullable: false),
-                    LoyaltyPoints = table.Column<int>(type: "int", nullable: true),
-                    Child_AccountId = table.Column<int>(type: "int", nullable: true),
-                    ParentId = table.Column<int>(type: "int", nullable: true),
-                    AccountId = table.Column<int>(type: "int", nullable: true),
-                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                    RewardName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RewardDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RewardPrice = table.Column<int>(type: "int", nullable: false),
+                    RewardPicture = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_AspNetUsers_AspNetUsers_ParentId",
-                        column: x => x.ParentId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                    table.PrimaryKey("PK_Rewards", x => x.RewardId);
                 });
 
             migrationBuilder.CreateTable(
@@ -94,16 +71,91 @@ namespace ABKids_BackEnd.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     OwnerType = table.Column<int>(type: "int", nullable: false),
                     Balance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    OwnerId = table.Column<int>(type: "int", nullable: false)
+                    OwnerId = table.Column<int>(type: "int", nullable: false),
+                    SavingsGoalId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Accounts", x => x.AccountId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUsers",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ProfilePicture = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    LoyaltyPoints = table.Column<int>(type: "int", nullable: true),
+                    ChildAccountId = table.Column<int>(type: "int", nullable: true),
+                    ParentId = table.Column<int>(type: "int", nullable: true),
+                    ParentAccountId = table.Column<int>(type: "int", nullable: true),
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Accounts_AspNetUsers_OwnerId",
-                        column: x => x.OwnerId,
+                        name: "FK_AspNetUsers_Accounts_ChildAccountId",
+                        column: x => x.ChildAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "AccountId");
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_Accounts_ParentAccountId",
+                        column: x => x.ParentAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "AccountId");
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_AspNetUsers_ParentId",
+                        column: x => x.ParentId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Transactions",
+                columns: table => new
+                {
+                    TransactionId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SenderAccountId = table.Column<int>(type: "int", nullable: false),
+                    SenderType = table.Column<int>(type: "int", nullable: false),
+                    ReceiverAccountId = table.Column<int>(type: "int", nullable: false),
+                    ReceiverType = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Transactions", x => x.TransactionId);
+                    table.ForeignKey(
+                        name: "FK_Transactions_Accounts_ReceiverAccountId",
+                        column: x => x.ReceiverAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "AccountId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Transactions_Accounts_SenderAccountId",
+                        column: x => x.SenderAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "AccountId",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -215,6 +267,37 @@ namespace ABKids_BackEnd.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SavingsGoals",
+                columns: table => new
+                {
+                    SavingsGoalId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    GoalName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TargetAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    SavingsGoalPicture = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCompleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ChildId = table.Column<int>(type: "int", nullable: false),
+                    SavingsGoalAccountId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SavingsGoals", x => x.SavingsGoalId);
+                    table.ForeignKey(
+                        name: "FK_SavingsGoals_Accounts_SavingsGoalAccountId",
+                        column: x => x.SavingsGoalAccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "AccountId");
+                    table.ForeignKey(
+                        name: "FK_SavingsGoals_AspNetUsers_ChildId",
+                        column: x => x.ChildId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tasks",
                 columns: table => new
                 {
@@ -247,73 +330,16 @@ namespace ABKids_BackEnd.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "SavingsGoals",
-                columns: table => new
-                {
-                    SavingsGoalId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    GoalName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TargetAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    SavingsGoalPicture = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateCompleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ChildId = table.Column<int>(type: "int", nullable: false),
-                    AccountId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SavingsGoals", x => x.SavingsGoalId);
-                    table.ForeignKey(
-                        name: "FK_SavingsGoals_Accounts_AccountId",
-                        column: x => x.AccountId,
-                        principalTable: "Accounts",
-                        principalColumn: "AccountId",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_SavingsGoals_AspNetUsers_ChildId",
-                        column: x => x.ChildId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Transactions",
-                columns: table => new
-                {
-                    TransactionId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    SenderAccountId = table.Column<int>(type: "int", nullable: false),
-                    SenderType = table.Column<int>(type: "int", nullable: false),
-                    ReceiverAccountId = table.Column<int>(type: "int", nullable: false),
-                    ReceiverType = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Transactions", x => x.TransactionId);
-                    table.ForeignKey(
-                        name: "FK_Transactions_Accounts_ReceiverAccountId",
-                        column: x => x.ReceiverAccountId,
-                        principalTable: "Accounts",
-                        principalColumn: "AccountId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Transactions_Accounts_SenderAccountId",
-                        column: x => x.SenderAccountId,
-                        principalTable: "Accounts",
-                        principalColumn: "AccountId",
-                        onDelete: ReferentialAction.Restrict);
-                });
+            migrationBuilder.CreateIndex(
+                name: "IX_Accounts_OwnerId_OwnerType",
+                table: "Accounts",
+                columns: new[] { "OwnerId", "OwnerType" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Accounts_OwnerId",
+                name: "IX_Accounts_SavingsGoalId",
                 table: "Accounts",
-                column: "OwnerId",
-                unique: true);
+                column: "SavingsGoalId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -348,6 +374,20 @@ namespace ABKids_BackEnd.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_ChildAccountId",
+                table: "AspNetUsers",
+                column: "ChildAccountId",
+                unique: true,
+                filter: "[ChildAccountId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_ParentAccountId",
+                table: "AspNetUsers",
+                column: "ParentAccountId",
+                unique: true,
+                filter: "[ParentAccountId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AspNetUsers_ParentId",
                 table: "AspNetUsers",
                 column: "ParentId");
@@ -365,15 +405,16 @@ namespace ABKids_BackEnd.Migrations
                 column: "ChildId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_SavingsGoals_AccountId",
-                table: "SavingsGoals",
-                column: "AccountId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_SavingsGoals_ChildId",
                 table: "SavingsGoals",
                 column: "ChildId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SavingsGoals_SavingsGoalAccountId",
+                table: "SavingsGoals",
+                column: "SavingsGoalAccountId",
+                unique: true,
+                filter: "[SavingsGoalAccountId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tasks_ChildId",
@@ -394,11 +435,22 @@ namespace ABKids_BackEnd.Migrations
                 name: "IX_Transactions_SenderAccountId",
                 table: "Transactions",
                 column: "SenderAccountId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Accounts_SavingsGoals_SavingsGoalId",
+                table: "Accounts",
+                column: "SavingsGoalId",
+                principalTable: "SavingsGoals",
+                principalColumn: "SavingsGoalId");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_Accounts_SavingsGoals_SavingsGoalId",
+                table: "Accounts");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -418,7 +470,7 @@ namespace ABKids_BackEnd.Migrations
                 name: "LoyaltyTransactions");
 
             migrationBuilder.DropTable(
-                name: "SavingsGoals");
+                name: "Rewards");
 
             migrationBuilder.DropTable(
                 name: "Tasks");
@@ -430,10 +482,13 @@ namespace ABKids_BackEnd.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Accounts");
+                name: "SavingsGoals");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Accounts");
         }
     }
 }

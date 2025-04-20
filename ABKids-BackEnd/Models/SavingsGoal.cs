@@ -21,7 +21,7 @@ namespace ABKids_BackEnd.Models
 
         // FK to Account
         [ForeignKey("Account")]
-        public int? AccountId { get; set; }
+        public int? SavingsGoalAccountId { get; set; }
         public Account? Account { get; set; }
         public enum SavingsGoalStatus
         {
