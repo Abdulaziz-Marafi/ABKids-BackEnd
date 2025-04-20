@@ -91,7 +91,7 @@ namespace ABKids_BackEnd.Controllers
                     DateCreated = sg.DateCreated,
                     DateCompleted = sg.DateCompleted,
                     ChildId = sg.ChildId,
-                    AccountId = (int)sg.AccountId,
+                    AccountId = (int)sg.SavingsGoalAccountId,
                     CurrentBalance = sg.Account != null ? sg.Account.Balance : 0m // Handle null Account
                 })
                 .ToListAsync();
@@ -187,7 +187,7 @@ namespace ABKids_BackEnd.Controllers
             await _context.SaveChangesAsync();
 
             // Link account to savings goal
-            savingsGoal.AccountId = goalAccount.AccountId;
+            savingsGoal.SavingsGoalAccountId = goalAccount.AccountId;
             savingsGoal.Account = goalAccount;
             await _context.SaveChangesAsync();
 
@@ -201,7 +201,7 @@ namespace ABKids_BackEnd.Controllers
                 DateCreated = savingsGoal.DateCreated,
                 DateCompleted = savingsGoal.DateCompleted,
                 ChildId = savingsGoal.ChildId,
-                AccountId = (int)savingsGoal.AccountId,
+                AccountId = (int)savingsGoal.SavingsGoalAccountId,
                 CurrentBalance = goalAccount.Balance
             };
 
@@ -254,7 +254,7 @@ namespace ABKids_BackEnd.Controllers
                 return BadRequest(new { Message = "Savings goal is not in progress" });
             }
 
-            if (!savingsGoal.AccountId.HasValue || savingsGoal.Account == null)
+            if (savingsGoal.SavingsGoalAccountId == null || savingsGoal.Account == null)
             {
                 return BadRequest(new { Message = "Savings goal has no associated account" });
             }
@@ -293,7 +293,7 @@ namespace ABKids_BackEnd.Controllers
                 SenderAccountId = childAccount.AccountId,
                 SenderAccount = childAccount,
                 SenderType = (Transaction.AccountOwnerType)AccountOwnerType.Child,
-                ReceiverAccountId = savingsGoal.AccountId.Value,
+                ReceiverAccountId = (int)savingsGoal.SavingsGoalAccountId,
                 ReceiverAccount = savingsGoal.Account,
                 ReceiverType = (Transaction.AccountOwnerType)AccountOwnerType.SavingsGoal
             };
@@ -316,7 +316,7 @@ namespace ABKids_BackEnd.Controllers
                 {
                     Amount = returnAmount,
                     DateCreated = DateTime.UtcNow,
-                    SenderAccountId = savingsGoal.AccountId.Value,
+                    SenderAccountId = (int)savingsGoal.SavingsGoalAccountId,
                     SenderAccount = savingsGoal.Account,
                     SenderType = (Transaction.AccountOwnerType)AccountOwnerType.SavingsGoal,
                     ReceiverAccountId = childAccount.AccountId,
@@ -356,7 +356,7 @@ namespace ABKids_BackEnd.Controllers
                 DateCreated = savingsGoal.DateCreated,
                 DateCompleted = savingsGoal.DateCompleted,
                 ChildId = savingsGoal.ChildId,
-                AccountId = (int)savingsGoal.AccountId,
+                AccountId = (int)savingsGoal.SavingsGoalAccountId,
                 CurrentBalance = savingsGoal.Account.Balance,
                 Message = depositAmount < dto.Amount ? $"Deposit capped at {depositAmount:F2} KWD to meet target" : null
             };
@@ -398,7 +398,7 @@ namespace ABKids_BackEnd.Controllers
                 return BadRequest(new { Message = "Savings goal is not in progress" });
             }
 
-            if (!savingsGoal.AccountId.HasValue || savingsGoal.Account == null)
+            if (savingsGoal.SavingsGoalAccountId == null || savingsGoal.Account == null)
             {
                 return BadRequest(new { Message = "Savings goal has no associated account" });
             }
@@ -421,7 +421,7 @@ namespace ABKids_BackEnd.Controllers
                 {
                     Amount = transferAmount,
                     DateCreated = DateTime.UtcNow,
-                    SenderAccountId = savingsGoal.AccountId.Value,
+                    SenderAccountId = (int)savingsGoal.SavingsGoalAccountId,
                     SenderAccount = savingsGoal.Account,
                     SenderType = (Transaction.AccountOwnerType)AccountOwnerType.SavingsGoal,
                     ReceiverAccountId = childAccount.AccountId,
@@ -448,7 +448,7 @@ namespace ABKids_BackEnd.Controllers
                 DateCreated = savingsGoal.DateCreated,
                 DateCompleted = savingsGoal.DateCompleted,
                 ChildId = savingsGoal.ChildId,
-                AccountId = (int)savingsGoal.AccountId,
+                AccountId = (int)savingsGoal.SavingsGoalAccountId,
                 CurrentBalance = savingsGoal.Account.Balance,
                 Message = transferAmount > 0 ? $"Transferred {transferAmount:F2} KWD back to child account" : "Savings goal broken with no funds to transfer"
             };

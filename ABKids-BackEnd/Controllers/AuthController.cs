@@ -63,10 +63,20 @@ namespace ABKids_BackEnd.Controllers
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Type = UserType.Parent,
-                ProfilePicture = profilePicturePath
+                ProfilePicture = profilePicturePath,
+                ParentAccountId = null, // Explicitly null,
+                
             };
 
             var result = await _userManager.CreateAsync(parent, dto.Password);
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+                return BadRequest(ModelState);
+            }
 
             if (result.Succeeded)
             {
@@ -78,15 +88,17 @@ namespace ABKids_BackEnd.Controllers
                     Balance = 10000m
                 };
 
-                // Link the account to the parent
+                // Link account to parent
                 parent.Account = account;
+                parent.ParentAccountId = null; // Explicitly set to null before saving account
 
-                // Add the account to the context and save
+                // Save account
                 _context.Accounts.Add(account);
                 await _context.SaveChangesAsync();
 
-                // No need to set parent.AccountId manually here since EF handles it via navigation property
-                // await _context.SaveChangesAsync(); // Already saved above
+                // Update parent with AccountId
+                parent.ParentAccountId = account.AccountId;
+                await _context.SaveChangesAsync();
 
                 return Ok(new AuthResponseDTO
                 {

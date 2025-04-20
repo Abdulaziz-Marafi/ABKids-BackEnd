@@ -11,7 +11,7 @@ namespace ABKids_BackEnd.Models
 
         // One-to-one relation with Account
         [ForeignKey("Account")]
-        public int? AccountId { get; set; } 
-        public Account Account { get; set; }
+        public int? ParentAccountId { get; set; } 
+        public Account? Account { get; set; }
     }
 }

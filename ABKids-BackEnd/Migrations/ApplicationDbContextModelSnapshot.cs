@@ -39,7 +39,12 @@ namespace ABKids_BackEnd.Migrations
                     b.Property<int>("OwnerType")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SavingsGoalId")
+                        .HasColumnType("int");
+
                     b.HasKey("AccountId");
+
+                    b.HasIndex("SavingsGoalId");
 
                     b.HasIndex("OwnerId", "OwnerType")
                         .IsUnique();
@@ -111,12 +116,6 @@ namespace ABKids_BackEnd.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SavingsGoalId"));
 
-                    b.Property<int?>("AccountId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("AccountId1")
-                        .HasColumnType("int");
-
                     b.Property<int>("ChildId")
                         .HasColumnType("int");
 
@@ -130,6 +129,9 @@ namespace ABKids_BackEnd.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("SavingsGoalAccountId")
+                        .HasColumnType("int");
+
                     b.Property<string>("SavingsGoalPicture")
                         .HasColumnType("nvarchar(max)");
 
@@ -141,15 +143,11 @@ namespace ABKids_BackEnd.Migrations
 
                     b.HasKey("SavingsGoalId");
 
-                    b.HasIndex("AccountId")
-                        .IsUnique()
-                        .HasFilter("[AccountId] IS NOT NULL");
-
-                    b.HasIndex("AccountId1")
-                        .IsUnique()
-                        .HasFilter("[AccountId1] IS NOT NULL");
-
                     b.HasIndex("ChildId");
+
+                    b.HasIndex("SavingsGoalAccountId")
+                        .IsUnique()
+                        .HasFilter("[SavingsGoalAccountId] IS NOT NULL");
 
                     b.ToTable("SavingsGoals");
                 });
@@ -457,7 +455,7 @@ namespace ABKids_BackEnd.Migrations
                 {
                     b.HasBaseType("ABKids_BackEnd.Models.User");
 
-                    b.Property<int?>("AccountId")
+                    b.Property<int?>("ChildAccountId")
                         .HasColumnType("int");
 
                     b.Property<int>("LoyaltyPoints")
@@ -466,17 +464,11 @@ namespace ABKids_BackEnd.Migrations
                     b.Property<int?>("ParentId")
                         .HasColumnType("int");
 
-                    b.HasIndex("AccountId")
+                    b.HasIndex("ChildAccountId")
                         .IsUnique()
-                        .HasFilter("[AccountId] IS NOT NULL");
+                        .HasFilter("[ChildAccountId] IS NOT NULL");
 
                     b.HasIndex("ParentId");
-
-                    b.ToTable("AspNetUsers", t =>
-                        {
-                            t.Property("AccountId")
-                                .HasColumnName("Child_AccountId");
-                        });
 
                     b.HasDiscriminator().HasValue(1);
                 });
@@ -485,14 +477,23 @@ namespace ABKids_BackEnd.Migrations
                 {
                     b.HasBaseType("ABKids_BackEnd.Models.User");
 
-                    b.Property<int?>("AccountId")
+                    b.Property<int?>("ParentAccountId")
                         .HasColumnType("int");
 
-                    b.HasIndex("AccountId")
+                    b.HasIndex("ParentAccountId")
                         .IsUnique()
-                        .HasFilter("[AccountId] IS NOT NULL");
+                        .HasFilter("[ParentAccountId] IS NOT NULL");
 
                     b.HasDiscriminator().HasValue(0);
+                });
+
+            modelBuilder.Entity("ABKids_BackEnd.Models.Account", b =>
+                {
+                    b.HasOne("ABKids_BackEnd.Models.SavingsGoal", "SavingsGoal")
+                        .WithMany()
+                        .HasForeignKey("SavingsGoalId");
+
+                    b.Navigation("SavingsGoal");
                 });
 
             modelBuilder.Entity("ABKids_BackEnd.Models.LoyaltyTransaction", b =>
@@ -508,19 +509,15 @@ namespace ABKids_BackEnd.Migrations
 
             modelBuilder.Entity("ABKids_BackEnd.Models.SavingsGoal", b =>
                 {
-                    b.HasOne("ABKids_BackEnd.Models.Account", "Account")
-                        .WithOne()
-                        .HasForeignKey("ABKids_BackEnd.Models.SavingsGoal", "AccountId");
-
-                    b.HasOne("ABKids_BackEnd.Models.Account", null)
-                        .WithOne("SavingsGoal")
-                        .HasForeignKey("ABKids_BackEnd.Models.SavingsGoal", "AccountId1");
-
                     b.HasOne("ABKids_BackEnd.Models.Child", "Child")
                         .WithMany("SavingsGoals")
                         .HasForeignKey("ChildId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("ABKids_BackEnd.Models.Account", "Account")
+                        .WithOne()
+                        .HasForeignKey("ABKids_BackEnd.Models.SavingsGoal", "SavingsGoalAccountId");
 
                     b.Navigation("Account");
 
@@ -620,7 +617,7 @@ namespace ABKids_BackEnd.Migrations
                 {
                     b.HasOne("ABKids_BackEnd.Models.Account", "Account")
                         .WithOne("ChildOwner")
-                        .HasForeignKey("ABKids_BackEnd.Models.Child", "AccountId");
+                        .HasForeignKey("ABKids_BackEnd.Models.Child", "ChildAccountId");
 
                     b.HasOne("ABKids_BackEnd.Models.Parent", "Parent")
                         .WithMany("Children")
@@ -635,7 +632,7 @@ namespace ABKids_BackEnd.Migrations
                 {
                     b.HasOne("ABKids_BackEnd.Models.Account", "Account")
                         .WithOne("ParentOwner")
-                        .HasForeignKey("ABKids_BackEnd.Models.Parent", "AccountId");
+                        .HasForeignKey("ABKids_BackEnd.Models.Parent", "ParentAccountId");
 
                     b.Navigation("Account");
                 });
@@ -647,8 +644,6 @@ namespace ABKids_BackEnd.Migrations
                     b.Navigation("ParentOwner");
 
                     b.Navigation("ReceivedTransactions");
-
-                    b.Navigation("SavingsGoal");
 
                     b.Navigation("SentTransactions");
                 });
