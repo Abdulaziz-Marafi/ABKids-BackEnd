@@ -117,7 +117,7 @@ namespace ABKids_BackEnd.Data
             // SavingsGoal Relationships
             modelBuilder.Entity<SavingsGoal>()
                 .HasOne(sg => sg.Account)
-                .WithOne() // No inverse navigation property needed
+                .WithOne(a => a.SavingsGoal) // No inverse navigation property needed
                 .HasForeignKey<SavingsGoal>(sg => sg.SavingsGoalAccountId)
                 .IsRequired(false); // Keep nullable
 
