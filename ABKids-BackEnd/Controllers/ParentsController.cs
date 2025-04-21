@@ -41,6 +41,47 @@ namespace ABKids_BackEnd.Controllers
 
         #region Get Actions
 
+        [HttpGet("children")]
+        [Authorize]
+        public async Task<IActionResult> GetAllChildren()
+        {
+            // Get the logged-in parent's ID from JWT claims
+            var parentIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (parentIdClaim == null || !int.TryParse(parentIdClaim, out int parentId))
+            {
+                return Unauthorized(new { Message = "Invalid user ID" });
+            }
+
+            // Verify the user is a Parent
+            var parent = await _context.Parents
+                .FirstOrDefaultAsync(p => p.Id == parentId && p.Type == UserType.Parent);
+            if (parent == null)
+            {
+                return Unauthorized(new { Message = "Only parents can access this endpoint" });
+            }
+
+            // Retrieve all children for the parent
+            var children = await _context.Children
+                .Where(c => c.ParentId == parentId).GroupJoin(
+                    _context.Accounts,
+                    child => child.ChildAccountId,
+                    account => account.AccountId,
+                    (child, accounts) => new { Child = child, Accounts = accounts })
+                .SelectMany(
+                    ca => ca.Accounts.DefaultIfEmpty(),
+                    (ca, account) => new ChildResponseDTO
+                    {
+                        ChildId = ca.Child.Id,
+                        FirstName = ca.Child.FirstName,
+                        LastName = ca.Child.LastName,
+                        ChildAccountId = ca.Child.ChildAccountId,
+                        Balance = account != null ? account.Balance : null
+                    })
+                .ToListAsync();
+
+            return Ok(children);
+        }
+
         // GET: api/parent/tasks(Get All Tasks for All Children)
         [HttpGet("tasks")]
         public async Task<IActionResult> GetAllTasks()

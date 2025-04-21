@@ -56,7 +56,8 @@ namespace ABKids_BackEnd.Controllers
             {
                 UserId = int.Parse(userId),
                 UserType = user.Type.ToString(),
-                Balance = account.Balance
+                Balance = account.Balance,
+                Name = user.FirstName + " " + user.LastName
             };
 
             return Ok(response);
